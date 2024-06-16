@@ -2,9 +2,12 @@
 
 Repositorio para la revisión de actividades en clase.
 
-## Tareas
-- []
+## Reportes
+- [Reportes](./Reportes)
+
+## Prácticas
+- [Practicas](./Practicas/Practica1/)
 
 ## Notebooks
-- [Data mining](./data_mining.ipynb)
-- [Linear Regression](./linear_regression.ipynb)
+- [Data mining](./notebooks/data_mining.ipynb)
+- [Linear Regression](./notebooks/linear_regression.ipynb)
