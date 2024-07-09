@@ -26,3 +26,21 @@ if __name__ == "__main__":
 
     # Realizar regresión Lasso para un activo con diferentes alphas
     asset_reg.lasso_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], alphas)
+
+    # Realizar regresión polinomial para un activo con diferentes grados
+    degrees = [2, 3, 4]
+    asset_reg.polynomial_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], degrees)
+
+    # Realizar regresión polinomial con Ridge para un activo con diferentes grados y alphas
+    asset_reg.polynomial_ridge_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], degrees, alphas)
+
+    # Realizar regresión polinomial con Lasso para un activo con diferentes grados y alphas
+    asset_reg.polynomial_lasso_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], degrees, alphas)
+
+    # Realizar regresión KNN para un activo con diferentes valores de n_neighbors
+    n_neighbors = [3, 5, 7]
+    asset_reg.knn_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], n_neighbors)
+
+    # Realizar regresión con árbol de decisión para un activo con diferentes profundidades máximas
+    max_depths = [3, 5, 7]
+    asset_reg.decision_tree_regression(df_2023, Column.YEAR_MONTH, [Column.APPLE_PRICE, Column.AMAZON_PRICE], max_depths)
