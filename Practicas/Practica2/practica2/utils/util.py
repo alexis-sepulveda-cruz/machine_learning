@@ -1,8 +1,36 @@
 import numbers
 import os
+import numpy as np
 from practica2.utils.column_assets import ColumnAssets as Column
 import pandas as pd
 
+
+asset_groups = {
+    'financial_assets': [Column.S_P_500_PRICE, Column.NASDAQ_100_PRICE, Column.BITCOIN_PRICE, Column.ETHEREUM_PRICE],
+    'commodities': [Column.NATURAL_GAS_PRICE, Column.CRUDE_OIL_PRICE, Column.COPPER_PRICE, Column.GOLD_PRICE, Column.SILVER_PRICE, Column.PLATINUM_PRICE],
+    'tech_stocks': [Column.APPLE_PRICE, Column.MICROSOFT_PRICE, Column.GOOGLE_PRICE, Column.AMAZON_PRICE, Column.META_PRICE, Column.NETFLIX_PRICE, Column.NVIDIA_PRICE, Column.TESLA_PRICE],
+    'others': [Column.BERKSHIRE_PRICE]
+}
+
+activos = [
+    Column.S_P_500_PRICE, Column.NASDAQ_100_PRICE, Column.BITCOIN_PRICE, Column.ETHEREUM_PRICE,
+    Column.NATURAL_GAS_PRICE, Column.CRUDE_OIL_PRICE, Column.COPPER_PRICE, Column.GOLD_PRICE, Column.SILVER_PRICE, Column.PLATINUM_PRICE,
+    Column.APPLE_PRICE, Column.MICROSOFT_PRICE, Column.GOOGLE_PRICE, Column.AMAZON_PRICE, Column.META_PRICE, Column.NETFLIX_PRICE,
+    Column.NVIDIA_PRICE, Column.TESLA_PRICE, Column.BERKSHIRE_PRICE
+]
+
+periodos = [7, 30, 90]
+
+
+def calcular_tendencia(serie: pd.DataFrame, ventana):
+    cambio_porcentual = (serie.pct_change(periods=ventana) * 100).fillna(0)
+    condiciones = [
+        (cambio_porcentual > 2),
+        (cambio_porcentual < -2),
+        ((cambio_porcentual >= -2) & (cambio_porcentual <= 2))
+    ]
+    opciones = ['alcista', 'bajista', 'lateral']
+    return np.select(condiciones, opciones, default='lateral')
 
 def get_data(data_file: str = 'stock_market_dataset.csv') -> pd.DataFrame:
     # Obtener los nombres de las columnas del archivo CSV
@@ -24,12 +52,19 @@ def get_data(data_file: str = 'stock_market_dataset.csv') -> pd.DataFrame:
     df = df.replace({',': ''}, regex=True)
 
     # Convertir todas las columnas, excepto 'Date' y 'YEAR', en flotantes
-    for col in df.columns:
-        if col not in [Column.DATE, Column.YEAR, Column.MONTH]:
-            try:
-                df[col] = pd.to_numeric(df[col])
-            except ValueError:
-                pass
+    for column in df.columns.difference([Column.DATE, Column.YEAR, Column.MONTH]):
+        try:
+            df[column] = pd.to_numeric(df[column])
+        except ValueError:
+            pass
+
+        # if column in activos:
+        #     for periodo in periodos:
+        #         nueva_columna = f"{column}_tendencia_{periodo}d"
+        #         df[nueva_columna] = calcular_tendencia(df[column], periodo)
+
+    # Se ordena el data set por fecha
+    df = df.sort_values(Column.DATE)
 
     return df
 
