@@ -1,7 +1,7 @@
 import numbers
 import os
 import numpy as np
-from practica2.utils.column_assets import ColumnAssets as Column
+from practica3.utils.column_assets import ColumnAssets as Column
 import pandas as pd
 
 

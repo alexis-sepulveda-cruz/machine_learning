@@ -1,7 +1,7 @@
 import numbers
 import os
 import numpy as np
-from practica2.utils.column_assets import ColumnAssets as Column
+from practica4.utils.column_assets import ColumnAssets as Column
 import pandas as pd
 
 
@@ -20,7 +20,6 @@ activos = [
 ]
 
 periodos = [7, 30, 90]
-
 
 def calcular_tendencia(serie: pd.DataFrame, ventana):
     cambio_porcentual = (serie.pct_change(periods=ventana) * 100).fillna(0)
@@ -84,8 +83,6 @@ def filter_data_by_year(df, year) -> pd.DataFrame:
     agg_data = agg_data.assign(Year_Month=agg_data[Column.YEAR].astype(str) + '-' + agg_data[Column.MONTH].astype(str))
 
     return agg_data
-
-
 
 def ensure_directory_exists(base_path):
     """
