@@ -86,23 +86,26 @@ class Classification:
         self.df_train = self.df_train.dropna()
         self.df_test = self.df_test.dropna()
 
-        # Dividir los datos en características (X) y etiquetas (y)
-        X: pd.DataFrame = self.df_train.drop('engagement', axis=1)
-        y: pd.Series = self.df_train['engagement']
+        # Dividir los datos de entrenamiento en características (X) y etiquetas (y)
+        X_train: pd.DataFrame = self.df_train.drop('engagement', axis=1)
+        y_train: pd.Series = self.df_train['engagement']
 
-        # Dividir los datos en conjuntos de entrenamiento, validación y prueba
-        X_train_val, self.X_test, y_train_val, self.y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+        # Dividir los datos de entrenamiento en conjuntos de entrenamiento y validación
         self.X_train, self.X_val, self.y_train, self.y_val = train_test_split(
-            X_train_val, y_train_val, test_size=0.25, random_state=42
+            X_train, y_train, test_size=0.2, random_state=42
         )
+
+        # Preparar datos de prueba
+        self.X_test: pd.DataFrame = self.df_test.copy()  # No dividimos df_test, lo usamos completo
 
         # Escalar las características
         scaler: StandardScaler = StandardScaler()
         self.X_train = scaler.fit_transform(self.X_train)
         self.X_val = scaler.transform(self.X_val)
         self.X_test = scaler.transform(self.X_test)
+
+        # Nota: No tenemos y_test ya que df_test no incluye la columna 'engagement'
+        self.y_test = None
 
     def plot_classification_results(self, models: Dict[str, BaseEstimator]) -> None:
         """
@@ -145,21 +148,27 @@ class Classification:
             
             plt.close()
 
-    def plot_results_table(self, results: Dict[str, Dict[str, float]], 
+    def plot_results_table(self, results: Dict[str, Dict[str, Any]], 
                        use_grid_search: bool) -> None:
         """
         Genera y guarda una tabla visual con los resultados de cada modelo.
 
         Args:
-            results (Dict[str, Dict[str, float]]): Resultados de la evaluación.
+            results (Dict[str, Dict[str, Any]]): Resultados de la evaluación.
             use_grid_search (bool): Indica si se usó Grid Search.
         """
         models = list(results.keys())
-        metrics = list(results[models[0]].keys())
+        metrics = ['CV Score', 'Validation Score', 'Pos. Pred. Test', 'Mean Prob. Test']
 
         cell_text = []
         for model in models:
-            cell_text.append([f"{results[model][metric]:.4f}" for metric in metrics])
+            row = [
+                f"{results[model]['CV Score']:.4f}",
+                f"{results[model]['Validation Score']:.4f}",
+                f"{sum(results[model]['Test Predictions'])}",
+                f"{np.mean(results[model]['Test Probabilities']):.4f}"
+            ]
+            cell_text.append(row)
 
         fig, ax = plt.subplots(figsize=(12, len(models) + 1))
         ax.axis('off')
@@ -225,15 +234,15 @@ class Classification:
                 self.y_val, best_model.predict_proba(self.X_val)[:, 1]
             )
 
-            # Evaluación en conjunto de prueba
-            test_score: float = roc_auc_score(
-                self.y_test, best_model.predict_proba(self.X_test)[:, 1]
-            )
+            # Predicciones en conjunto de prueba
+            test_predictions: np.ndarray = best_model.predict(self.X_test)
+            test_proba: np.ndarray = best_model.predict_proba(self.X_test)[:, 1]
 
             results[name] = {
                 'CV Score': cv_score,
                 'Validation Score': val_score,
-                'Test Score': test_score
+                'Test Predictions': test_predictions,
+                'Test Probabilities': test_proba
             }
 
         self.plot_roc_curves(best_models, use_grid_search)
@@ -252,13 +261,25 @@ class Classification:
             Dict[str, Any]: Cuadrícula de parámetros.
         """
         if model_name == 'KNN':
-            return {'n_neighbors': [3, 5, 7, 9], 'weights': ['uniform', 'distance']}
+            return {
+                'n_neighbors': [3, 5, 7, 9],
+                'weights': ['uniform', 'distance']
+            }
         elif model_name == 'Logistic Regression':
-            return {'C': [0.1, 1, 10], 'penalty': ['l1', 'l2']}
+            return {
+                'C': [0.1, 1, 10],
+                'penalty': ['l1', 'l2']
+            }
         elif model_name == 'SVM':
-            return {'C': [0.1, 1, 10], 'kernel': ['rbf', 'linear']}
+            return {
+                'C': [0.1, 1, 10],
+                'kernel': ['rbf', 'linear']
+            }
         elif model_name == 'Decision Tree':
-            return {'max_depth': [3, 5, 7, 9], 'min_samples_split': [2, 5, 10]}
+            return {
+                'max_depth': [3, 5, 7, 9],
+                'min_samples_split': [2, 5, 10]
+            }
         else:
             return {}
 
@@ -283,21 +304,27 @@ class Classification:
         self.print_results(results_with_gs)
         self.plot_results_table(results_with_gs, use_grid_search=True)
 
-    def print_results(self, results: Dict[str, Dict[str, float]]) -> None:
+    def print_results(self, results: Dict[str, Dict[str, Any]]) -> None:
         """
         Imprime los resultados de la evaluación de los modelos.
 
         Args:
-            results (Dict[str, Dict[str, float]]): Resultados a imprimir.
+            results (Dict[str, Dict[str, Any]]): Resultados a imprimir.
         """
         for model, scores in results.items():
             print(f"\n{model}:")
             for metric, score in scores.items():
-                print(f"  {metric}: {score:.4f}")
+                if metric in ['CV Score', 'Validation Score']:
+                    print(f"  {metric}: {score:.4f}")
+                elif metric == 'Test Predictions':
+                    print(f"  Número de predicciones positivas en test: {sum(score)}")
+                elif metric == 'Test Probabilities':
+                    print(f"  Probabilidad media de clase positiva en test: {np.mean(score):.4f}")
 
-    def plot_roc_curves(self, models: Dict[str, BaseEstimator], use_grid_search: bool) -> None:
+    def plot_roc_curves(self, models: Dict[str, BaseEstimator],
+                    use_grid_search: bool) -> None:
         """
-        Genera y guarda un gráfico de curvas ROC para los modelos entrenados.
+        Genera y guarda un gráfico de curvas ROC para los modelos entrenados usando el conjunto de validación.
 
         Args:
             models (Dict[str, BaseEstimator]): Modelos entrenados.
@@ -310,23 +337,24 @@ class Classification:
             y_pred_proba: np.ndarray = model.predict_proba(self.X_val)[:, 1]
             fpr, tpr, _ = roc_curve(self.y_val, y_pred_proba)
             auc: float = roc_auc_score(self.y_val, y_pred_proba)
-            plt.plot(fpr, tpr, color=color, label=f'{name} (AUC = {auc:.2f})')
+            plt.plot(fpr, tpr, color=color,
+                    label=f'{name} (AUC = {auc:.2f})')
 
         plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        plt.title('Receiver Operating Characteristic (ROC) Curve - Validation Set')
         plt.legend(loc="lower right")
-        
+
         # Guardar la imagen en el directorio especificado
         grid_search_suffix = "_grid_search" if use_grid_search else ""
-        img_path: str = os.path.join(self.base_path, f'roc_curve{grid_search_suffix}.png')
+        img_path: str = os.path.join(self.base_path,
+                                    f'roc_curve{grid_search_suffix}.png')
         plt.savefig(img_path)
-        print(f"Imagen ROC {'con' if use_grid_search else 'sin'} Grid Search guardada en: {img_path}")
-        
-        plt.close()  # Cerrar la figura para liberar memoria
+        print(f"Imagen ROC {'con' if use_grid_search else 'sin'} "
+            f"Grid Search guardada en: {img_path}")
 
 if __name__ == "__main__":
     classification: Classification = Classification()
