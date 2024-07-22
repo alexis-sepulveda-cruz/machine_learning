@@ -7,6 +7,7 @@ Repositorio para la revisión de actividades en clase.
 - [Reportes 2](./Reportes/Practica2.pdf)
 - [Reportes 3](./Reportes/Practica3.pdf)
 - [Reportes 4](./Reportes/Practica4.pdf)
+- [Reportes PIA (TODO)](./)
 
 
 ## Prácticas
@@ -14,6 +15,7 @@ Repositorio para la revisión de actividades en clase.
 - [Practicas 2](./Practicas/Practica2/)
 - [Practicas 3](./Practicas/Practica3/)
 - [Practicas 4](./Practicas/Practica4/)
+- [PIA](./Practicas/PIA/)
 
 
 ## Notebooks
