@@ -3,18 +3,18 @@
 Repositorio para la revisión de actividades en clase.
 
 ## Reportes
-- [Reportes 1](./Reportes/Practica1.pdf)
-- [Reportes 2](./Reportes/Practica2.pdf)
-- [Reportes 3](./Reportes/Practica3.pdf)
-- [Reportes 4](./Reportes/Practica4.pdf)
-- [Reportes PIA](./Reportes/PIA.pdf)
+- [Reporte 1](./Reportes/Practica1.pdf)
+- [Reporte 2](./Reportes/Practica2.pdf)
+- [Reporte 3](./Reportes/Practica3.pdf)
+- [Reporte 4](./Reportes/Practica4.pdf)
+- [Reporte PIA](./Reportes/PIA.pdf)
 
 
 ## Prácticas
-- [Practicas 1](./Practicas/Practica1/)
-- [Practicas 2](./Practicas/Practica2/)
-- [Practicas 3](./Practicas/Practica3/)
-- [Practicas 4](./Practicas/Practica4/)
+- [Practica 1](./Practicas/Practica1/)
+- [Practica 2](./Practicas/Practica2/)
+- [Practica 3](./Practicas/Practica3/)
+- [Practica 4](./Practicas/Practica4/)
 - [PIA](./Practicas/PIA/)
 
 
