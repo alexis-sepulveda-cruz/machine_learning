@@ -86,6 +86,10 @@ class Classification:
         self.df_train = self.df_train.dropna()
         self.df_test = self.df_test.dropna()
 
+        # Eliminar la columna 'id'
+        self.df_train = self.df_train.drop('id', axis=1)
+        self.df_test = self.df_test.drop('id', axis=1)
+
         # Dividir los datos de entrenamiento en características (X) y etiquetas (y)
         X_train: pd.DataFrame = self.df_train.drop('engagement', axis=1)
         y_train: pd.Series = self.df_train['engagement']
@@ -107,6 +111,40 @@ class Classification:
         # Nota: No tenemos y_test ya que df_test no incluye la columna 'engagement'
         self.y_test = None
 
+    def get_param_grid(self, model_name: str) -> Dict[str, Any]:
+        """
+        Obtiene la cuadrícula de parámetros para la búsqueda en cuadrícula.
+
+        Args:
+            model_name (str): Nombre del modelo.
+
+        Returns:
+            Dict[str, Any]: Cuadrícula de parámetros.
+        """
+        if model_name == 'KNN':
+            return {
+                'n_neighbors': [3, 5, 7, 9],
+                'weights': ['uniform', 'distance']
+            }
+        elif model_name == 'Logistic Regression':
+            return {
+                'C': [0.1, 1, 10],
+                'penalty': ['l2'],  
+                'solver': ['lbfgs', 'newton-cg', 'sag']
+            }
+        elif model_name == 'SVM':
+            return {
+                'C': [0.1, 1, 10],
+                'kernel': ['rbf', 'linear']
+            }
+        elif model_name == 'Decision Tree':
+            return {
+                'max_depth': [3, 5, 7, 9],
+                'min_samples_split': [2, 5, 10]
+            }
+        else:
+            return {}
+
     def plot_classification_results(self, models: Dict[str, BaseEstimator]) -> None:
         """
         Genera y guarda gráficos de dispersión para visualizar los resultados
@@ -120,7 +158,7 @@ class Classification:
         X_val_2d = pca.fit_transform(self.X_val)
 
         # Configurar el estilo de seaborn
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
 
         # Crear un gráfico para cada modelo
         for name, model in models.items():
@@ -196,131 +234,6 @@ class Classification:
 
         plt.close()
 
-    def train_and_evaluate(
-        self, use_grid_search: bool = False
-    ) -> Dict[str, Dict[str, float]]:
-        """
-        Entrena y evalúa los modelos de clasificación.
-
-        Args:
-            use_grid_search (bool): Si se debe usar búsqueda en cuadrícula.
-
-        Returns:
-            Dict[str, Dict[str, float]]: Resultados de la evaluación.
-        """
-        results: Dict[str, Dict[str, float]] = {}
-        best_models: Dict[str, BaseEstimator] = {}
-
-        for name, model in self.models.items():
-            if use_grid_search:
-                param_grid: Dict[str, Any] = self.get_param_grid(name)
-                grid_search: GridSearchCV = GridSearchCV(
-                    model, param_grid, cv=5, scoring='roc_auc'
-                )
-                grid_search.fit(self.X_train, self.y_train)
-                best_model: BaseEstimator = grid_search.best_estimator_
-            else:
-                best_model = model.fit(self.X_train, self.y_train)
-
-            best_models[name] = best_model
-
-            # Validación cruzada
-            cv_score: float = cross_val_score(
-                best_model, self.X_train, self.y_train, cv=5, scoring='roc_auc'
-            ).mean()
-
-            # Evaluación en conjunto de validación
-            val_score: float = roc_auc_score(
-                self.y_val, best_model.predict_proba(self.X_val)[:, 1]
-            )
-
-            # Predicciones en conjunto de prueba
-            test_predictions: np.ndarray = best_model.predict(self.X_test)
-            test_proba: np.ndarray = best_model.predict_proba(self.X_test)[:, 1]
-
-            results[name] = {
-                'CV Score': cv_score,
-                'Validation Score': val_score,
-                'Test Predictions': test_predictions,
-                'Test Probabilities': test_proba
-            }
-
-        self.plot_roc_curves(best_models, use_grid_search)
-        self.plot_classification_results(best_models)
-
-        return results
-
-    def get_param_grid(self, model_name: str) -> Dict[str, Any]:
-        """
-        Obtiene la cuadrícula de parámetros para la búsqueda en cuadrícula.
-
-        Args:
-            model_name (str): Nombre del modelo.
-
-        Returns:
-            Dict[str, Any]: Cuadrícula de parámetros.
-        """
-        if model_name == 'KNN':
-            return {
-                'n_neighbors': [3, 5, 7, 9],
-                'weights': ['uniform', 'distance']
-            }
-        elif model_name == 'Logistic Regression':
-            return {
-                'C': [0.1, 1, 10],
-                'penalty': ['l1', 'l2']
-            }
-        elif model_name == 'SVM':
-            return {
-                'C': [0.1, 1, 10],
-                'kernel': ['rbf', 'linear']
-            }
-        elif model_name == 'Decision Tree':
-            return {
-                'max_depth': [3, 5, 7, 9],
-                'min_samples_split': [2, 5, 10]
-            }
-        else:
-            return {}
-
-    def run_classification(self) -> None:
-        """
-        Ejecuta el proceso de clasificación completo, incluyendo
-        preprocesamiento, entrenamiento y evaluación.
-        """
-        self.preprocess_data()
-
-        print("Resultados sin Grid Search:")
-        results_without_gs: Dict[str, Dict[str, float]] = self.train_and_evaluate(
-            use_grid_search=False
-        )
-        self.print_results(results_without_gs)
-        self.plot_results_table(results_without_gs, use_grid_search=False)
-
-        print("\nResultados con Grid Search:")
-        results_with_gs: Dict[str, Dict[str, float]] = self.train_and_evaluate(
-            use_grid_search=True
-        )
-        self.print_results(results_with_gs)
-        self.plot_results_table(results_with_gs, use_grid_search=True)
-
-    def print_results(self, results: Dict[str, Dict[str, Any]]) -> None:
-        """
-        Imprime los resultados de la evaluación de los modelos.
-
-        Args:
-            results (Dict[str, Dict[str, Any]]): Resultados a imprimir.
-        """
-        for model, scores in results.items():
-            print(f"\n{model}:")
-            for metric, score in scores.items():
-                if metric in ['CV Score', 'Validation Score']:
-                    print(f"  {metric}: {score:.4f}")
-                elif metric == 'Test Predictions':
-                    print(f"  Número de predicciones positivas en test: {sum(score)}")
-                elif metric == 'Test Probabilities':
-                    print(f"  Probabilidad media de clase positiva en test: {np.mean(score):.4f}")
-
     def plot_roc_curves(self, models: Dict[str, BaseEstimator],
                     use_grid_search: bool) -> None:
         """
@@ -355,6 +268,108 @@ class Classification:
         plt.savefig(img_path)
         print(f"Imagen ROC {'con' if use_grid_search else 'sin'} "
             f"Grid Search guardada en: {img_path}")
+
+    def train_and_evaluate(
+        self, use_grid_search: bool = False
+    ) -> Dict[str, Dict[str, float]]:
+        """
+        Entrena y evalúa los modelos de clasificación.
+
+        Args:
+            use_grid_search (bool): Si se debe usar búsqueda en cuadrícula.
+
+        Returns:
+            Dict[str, Dict[str, float]]: Resultados de la evaluación.
+        """
+        results: Dict[str, Dict[str, float]] = {}
+        best_models: Dict[str, BaseEstimator] = {}
+        best_params: Dict[str, Dict[str, Any]] = {}
+
+        for name, model in self.models.items():
+            if use_grid_search:
+                param_grid: Dict[str, Any] = self.get_param_grid(name)
+                grid_search: GridSearchCV = GridSearchCV(
+                    model, param_grid, cv=5, scoring='roc_auc', error_score='raise'
+                )
+                try:
+                    grid_search.fit(self.X_train, self.y_train)
+                    best_model: BaseEstimator = grid_search.best_estimator_
+                    best_params[name] = grid_search.best_params_
+                except Exception as e:
+                    print(f"Error en la búsqueda en cuadrícula para {name}: {str(e)}")
+                    continue
+            else:
+                best_model = model.fit(self.X_train, self.y_train)
+
+            best_models[name] = best_model
+
+            # Validación cruzada
+            cv_score: float = cross_val_score(
+                best_model, self.X_train, self.y_train, cv=5, scoring='roc_auc'
+            ).mean()
+
+            # Evaluación en conjunto de validación
+            val_score: float = roc_auc_score(
+                self.y_val, best_model.predict_proba(self.X_val)[:, 1]
+            )
+
+            # Predicciones en conjunto de prueba
+            test_predictions: np.ndarray = best_model.predict(self.X_test)
+            test_proba: np.ndarray = best_model.predict_proba(self.X_test)[:, 1]
+
+            results[name] = {
+                'CV Score': cv_score,
+                'Validation Score': val_score,
+                'Test Predictions': test_predictions,
+                'Test Probabilities': test_proba
+            }
+
+        self.plot_roc_curves(best_models, use_grid_search)
+        self.plot_classification_results(best_models)
+
+        return results, best_params
+    
+    def print_results(self, results: Dict[str, Dict[str, Any]]) -> None:
+        """
+        Imprime los resultados de la evaluación de los modelos.
+
+        Args:
+            results (Dict[str, Dict[str, Any]]): Resultados a imprimir.
+        """
+        for model, scores in results.items():
+            print(f"\n{model}:")
+            for metric, score in scores.items():
+                if metric in ['CV Score', 'Validation Score']:
+                    print(f"  {metric}: {score:.4f}")
+                elif metric == 'Test Predictions':
+                    print(f"  Número de predicciones positivas en test: {sum(score)}")
+                elif metric == 'Test Probabilities':
+                    print(f"  Probabilidad media de clase positiva en test: {np.mean(score):.4f}")
+
+    def run_classification(self) -> None:
+        """
+        Ejecuta el proceso de clasificación completo, incluyendo
+        preprocesamiento, entrenamiento y evaluación.
+        """
+        self.preprocess_data()
+
+        print("Resultados sin Grid Search:")
+        results_without_gs, _ = self.train_and_evaluate(
+            use_grid_search=False
+        )
+        self.print_results(results_without_gs)
+        self.plot_results_table(results_without_gs, use_grid_search=False)
+
+        print("\nResultados con Grid Search:")
+        results_with_gs, best_params = self.train_and_evaluate(
+            use_grid_search=True
+        )
+        self.print_results(results_with_gs)
+        self.plot_results_table(results_with_gs, use_grid_search=True)
+
+        print("\nMejores hiperparámetros:")
+        for model, params in best_params.items():
+            print(f"{model}: {params}")
 
 if __name__ == "__main__":
     classification: Classification = Classification()
